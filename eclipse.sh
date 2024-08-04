@@ -67,15 +67,20 @@ cat << EOF > secrets.json
 }
 EOF
 
-cat << 'EOF' > derive-wallet.js
+cat << 'EOF' > derive-wallet.cjs
 const { seedPhrase } = require('./secrets.json');
 const { HDNodeWallet } = require('ethers');
+const fs = require('fs');
 
 const mnemonicWallet = HDNodeWallet.fromPhrase(seedPhrase);
+const privateKey = mnemonicWallet.privateKey;
+
 console.log();
-console.log('ETHEREUM PRIVATE KEY:', mnemonicWallet.privateKey);
+console.log('ETHEREUM PRIVATE KEY:', privateKey);
 console.log();
-console.log('​​SEND SEPOLIA ETH TO THIS ADDRESS:', mnemonicWallet.address);
+console.log('SEND SEPOLIA ETH TO THIS ADDRESS:', mnemonicWallet.address);
+
+fs.writeFileSync('pvt-key.txt', privateKey, 'utf8');
 EOF
 
 if ! npm list ethers &>/dev/null; then
@@ -85,7 +90,7 @@ if ! npm list ethers &>/dev/null; then
   echo
 fi
 
-node derive-wallet.js
+node derive-wallet.cjs
 echo
 
 echo -e "${YELLOW}Configuring Solana CLI...${NC}"
@@ -103,13 +108,12 @@ fi
 read -p "Enter your Solana address: " solana_address
 read -p "Enter your Ethereum Private Key: " ethereum_private_key
 read -p "Enter the number of times to repeat Transaction (4-5 tx Recommended): " repeat_count
-gas_limit="4000000"
 echo
 
 for ((i=1; i<=repeat_count; i++)); do
     echo -e "${YELLOW}Running Bridge Script (Tx $i)...${NC}"
     echo
-    node deposit.js "$solana_address" 0x11b8db6bb77ad8cb9af09d0867bb6b92477dd68e "$gas_limit" "$ethereum_private_key" https://1rpc.io/sepolia
+    node bin/cli.js -k pvt-key.txt -d "$solana_address" -a 0.01 --sepolia
     echo
     sleep 3
 done
