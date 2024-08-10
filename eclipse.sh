@@ -32,11 +32,19 @@ sudo apt-get remove -y nodejs
 echo
 
 echo -e "${YELLOW}Installing NVM and Node.js LTS...${NC}"
-echo
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash && export NVM_DIR="/usr/local/share/nvm"; [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"; [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"; source ~/.bashrc; nvm install --lts; nvm use --lts
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+sleep 2
+source ~/.bashrc
+nvm install --lts
+nvm use --lts
 echo -e "${GREEN}Node.js installed: $(node -v)${NC}"
 echo
-
+if [ -d "testnet-deposit" ]; then
+    execute_and_prompt "Removing existing testnet-deposit folder..." "rm -rf testnet-deposit"
+fi
 echo -e "${YELLOW}Cloning repository and installing npm dependencies...${NC}"
 echo
 git clone https://github.com/Eclipse-Laboratories-Inc/testnet-deposit
@@ -46,17 +54,37 @@ echo
 
 echo -e "${YELLOW}Installing Solana CLI...${NC}"
 echo
+
 sh -c "$(curl -sSfL https://release.solana.com/stable/install)"
 export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"
+
 echo -e "${GREEN}Solana CLI installed: $(solana --version)${NC}"
 echo
+echo -e "${YELLOW}Choose an option:${NC}"
+echo -e "1) Create a new Solana wallet"
+echo -e "2) Import an existing Solana wallet"
 
-echo -e "${YELLOW}Generating new Solana keypair...${NC}"
-echo
-solana-keygen new -o ~/my-wallet.json
-echo
-echo -e "${YELLOW}Save these mnemonic phrases in safe Place.If there will any Airdrop in future, you will be eligible from this wallet so save it${NC}"
-echo
+read -p "Enter your choice (1 or 2): " choice
+
+WALLET_FILE=~/my-wallet.json
+
+# Check if the wallet file exists
+if [ -f "$WALLET_FILE" ]; then
+    echo -e "${YELLOW}Existing wallet file found. Removing it...${NC}"
+    rm "$WALLET_FILE"
+fi
+
+if [ "$choice" -eq 1 ]; then
+    echo -e "${YELLOW}Generating new Solana keypair...${NC}"
+    solana-keygen new -o "$WALLET_FILE"
+    echo -e "${YELLOW}Save these mnemonic phrases in a safe place. If there is any airdrop in the future, you will be eligible from this wallet, so save it.${NC}"
+elif [ "$choice" -eq 2 ]; then
+    echo -e "${YELLOW}Recovering existing Solana keypair...${NC}"
+    solana-keygen recover -o "$WALLET_FILE"
+else
+    echo -e "${RED}Invalid choice. Exiting.${NC}"
+    exit 1
+fi
 
 read -p "Enter your mneomic phrase: " mnemonic
 echo
@@ -78,7 +106,7 @@ const privateKey = mnemonicWallet.privateKey;
 console.log();
 console.log('ETHEREUM PRIVATE KEY:', privateKey);
 console.log();
-console.log('SEND SEPOLIA ETH TO THIS ADDRESS:', mnemonicWallet.address);
+console.log('SEND MIN 0.05 SEPOLIA ETH TO THIS ADDRESS:', mnemonicWallet.address);
 
 fs.writeFileSync('pvt-key.txt', privateKey, 'utf8');
 EOF
