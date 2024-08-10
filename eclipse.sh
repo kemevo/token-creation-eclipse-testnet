@@ -150,7 +150,6 @@ echo -e "${RED}It will take 4 mins, Don't do anything, Just Wait${RESET}"
 echo
 
 sleep 240
-
 execute_and_prompt "Creating token..." "spl-token create-token --enable-metadata -p TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
 echo
 
